@@ -1,0 +1,1 @@
+module add --name=com.postgres.jdbc --resources=/opt/edb/connectors/jdbc/edb-*17.jar --dependencies=javax.api,javax.transaction.api
