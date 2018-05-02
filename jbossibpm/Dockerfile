@@ -49,7 +49,7 @@ RUN echo "JAVA_OPTS=\"\$JAVA_OPTS -Djboss.bind.address=0.0.0.0 -Djboss.bind.addr
 # set permission folder
 RUN chown -R jboss:jboss /opt/jboss-eap-6.4
 
-# JBoss ports
+# JBoss and Postgres ports
 EXPOSE 8080 9990 9999 5444
 
 # Apply JBoss patches
