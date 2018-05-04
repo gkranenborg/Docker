@@ -79,13 +79,6 @@ RUN rm -rf /tmp/BZ-1358913.zip
 RUN mkdir /opt/jboss-eap-6.4/domain/log
 RUN chmod 755 /opt/jboss-eap-6.4/domain/log
 
-# Start JBoss
-RUN HOST_ADDR=$(hostname -i)
-RUN HOST_NAME=$(hostname -s)
-RUN JVM_PROPS="-Djboss.node.name=$HOST_NAME -Djgroups.bind_addr=$HOST_ADDR"
-RUN JVM_PROPS="$JVM_PROPS -Djboss.mod_cluster.jvmRoute=$HOST_NAME -DjvmRoute=$HOST_NAME"
-RUN $JBOSS_HOME/bin/domain.sh -b 0.0.0.0 -bunsecure=$HOST_ADDR -bmanagement=$HOST_ADDR $JVM_PROPS
-
 # install Postgress AS 9.5
 
 # Transfer files into Image and install
@@ -106,20 +99,17 @@ RUN POSTGRESJAR="/opt/edb/connectors/jdbc/edb-jdbc17.jar"
 RUN sed -i -e "s/127\.0\.0\.1\/32/0\.0\.0\.0\/0/g" /opt/edb/9.5AS/data/pg_hba.conf
 RUN echo "export PGDATA=/opt/edb/9.5AS/data" >>/root/.bashrc
 
-# Add jdbc connection to JBoss
-ADD clijdbc /tmp/clijdbc
-RUN /opt/jboss-eap-6.4/bin/jboss-cli.sh --file=/tmp/clijdbc
-RUN rm -rf /tmp/clijdbc
-
-# Start Postgres
-USER enterprisedb
-RUN /opt/edb/9.5AS/bin/pg_ctl start -D /opt/edb/9.5AS/data
-
 USER root
 
 # Transfer and install Jboss / Postgres statup script
 ADD init.sh /init.sh
 RUN chmod 755 /init.sh
+RUN /init.sh
+
+# Add jdbc connection to JBoss
+ADD clijdbc /tmp/clijdbc
+RUN /opt/jboss-eap-6.4/bin/jboss-cli.sh --file=/tmp/clijdbc
+RUN rm -rf /tmp/clijdbc
 
 # Transfer IBPM into Image and unzip engine directory
 ADD I-BPM11.4.1-EnterpriseEdition-CD_IMAGE_IF1141011.zip /tmp/I-BPM11.4.1-EnterpriseEdition-CD_IMAGE_IF1141011.zip
@@ -148,6 +138,14 @@ RUN sed -i -e 's/super_user\=ibpm_server1/super_user\=admin/g' /opt/engine/serve
 RUN sed -i -e 's/super_user_password\=/super_user_password\=Fujitsu1/g' /opt/engine/server/setup.config
 RUN sed -i -e 's/LDAPAccessUserID\=ibpm_server1/LDAPAccessUserID\=admin/g' /opt/engine/server/setup.config
 RUN sed -i -e 's/LDAPAccessUserPassword\=/LDAPAccessUserPassword\=Fujitsu1/g' /opt/engine/server/setup.config
+
+# Change default enconding for template Postgres DB
+# Set postgresql default encoding to UTF-8
+# ADD utf8.sql /tmp/utf8.sql
+# RUN export PGPASSWORD=Fujitsu1; \
+#    /opt/edb/9.5AS/bin/createdb -U enterprisedb enterprisedb; \
+#	/opt/edb/9.5AS/bin/psql -U enterprisedb -h localhost -a -f /tmp/utf8.sql; \
+#	rm -rf /tmp/utf8.sql
 
 # Install I-BPM
 RUN chmod 755 /opt/engine/server/deployment/dbsetup/postgresql/*.sh
