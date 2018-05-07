@@ -104,7 +104,6 @@ USER root
 # Transfer and install Jboss / Postgres statup script
 ADD init.sh /init.sh
 RUN chmod 755 /init.sh
-RUN /init.sh
 
 # Add jdbc connection to JBoss
 ADD clijdbc /tmp/clijdbc
@@ -139,19 +138,30 @@ RUN sed -i -e 's/super_user_password\=/super_user_password\=Fujitsu1/g' /opt/eng
 RUN sed -i -e 's/LDAPAccessUserID\=ibpm_server1/LDAPAccessUserID\=admin/g' /opt/engine/server/setup.config
 RUN sed -i -e 's/LDAPAccessUserPassword\=/LDAPAccessUserPassword\=Fujitsu1/g' /opt/engine/server/setup.config
 
-# Change default enconding for template Postgres DB
-# Set postgresql default encoding to UTF-8
-# ADD utf8.sql /tmp/utf8.sql
-# RUN export PGPASSWORD=Fujitsu1; \
-#    /opt/edb/9.5AS/bin/createdb -U enterprisedb enterprisedb; \
-#	/opt/edb/9.5AS/bin/psql -U enterprisedb -h localhost -a -f /tmp/utf8.sql; \
-#	rm -rf /tmp/utf8.sql
-
 # Install I-BPM
 RUN chmod 755 /opt/engine/server/deployment/dbsetup/postgresql/*.sh
 RUN export PGDATA="/opt/edb/9.5AS/data"
-RUN cd /opt/engine/server/deployment/dbsetup/postgresql
-RUN ./dbsetup.sh
+RUN /init.sh; \
+    sleep 20; \
+    cd /opt/engine/server/deployment/dbsetup/postgresql; \
+    ./dbsetup.sh; \
+    chmod 755 /opt/engine/server/setup.sh; \
+    export PGPASSWORD=Fujitsu1; \
+    /opt/engine/server/setup.sh -configFilePath /opt/engine/server/setup.config; \
+    JAVA_HOME=/usr/lib/jvm/java; \
+    /opt/edb/9.5AS/bin/psql -U enterprisedb -d ibpmdb -c "\copy ibpmproperties to '/tmp/bpmprop' csv;"; \
+    NEWHOSTNAME=$(hostname -i); \
+	sed -i -e "s/SMTPServerHost,\"\",-1,0/SMTPServerHost,\"$NEWHOSTNAME\",-1,0/g" /tmp/bpmprop; \
+	sed -i -e 's/SMTPServerPort,25,-1,0/SMTPServerPort,2525,-1,0/g' /tmp/bpmprop; \
+	/opt/edb/9.5AS/bin/psql -U enterprisedb -d ibpmdb -c "delete from ibpmproperties"; \
+	/opt/edb/9.5AS/bin/psql -U enterprisedb -d ibpmdb -c "\copy ibpmproperties from '/tmp/bpmprop' csv;"
+RUN rm -rf /tmp/bpmprop
+
+# Install BPM Action Library
+ADD bal-jars/*jar /opt/engine/server/instance/default/lib/ext
+ADD bal-jars/*txt /opt/engine/server/instance/default/resources
+ADD bal-jars/*bar /opt/engine/server/instance/default/lib/ext
+ADD bal-jars/*properties /opt/engine/server/instance/default/lib/ext
 
 # Create mountpoint for data directory.
 VOLUME /opt/edb/9.5AS/data
