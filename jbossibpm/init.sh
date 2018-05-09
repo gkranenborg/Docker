@@ -2,8 +2,10 @@
 
 su enterprisedb -c '/opt/edb/9.5AS/bin/pg_ctl start -D /opt/edb/9.5AS/data'
 
-HOST_ADDR=$(hostname -i)
-HOST_NAME=$(hostname -s)
+# HOST_ADDR=$(hostname -i)
+HOST_ADDR="127.0.0.1"
+# HOST_NAME=$(hostname -s)
+HOST_NAME="localhost"
 
 # some properties to avoid JGroups issues when using cluster/ha profiles
 JVM_PROPS="-Djboss.node.name=$HOST_NAME -Djgroups.bind_addr=$HOST_ADDR"

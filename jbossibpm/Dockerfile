@@ -32,6 +32,7 @@ RUN rm -rf /tmp/jboss-eap-6.4.zip
 
 # set environment
 ENV JBOSS_HOME /opt/jboss-eap-6.4
+ENV NEWHOSTNAME localhost
 
 # change executable permissions
 RUN chmod 755 $JBOSS_HOME/bin/*
@@ -41,6 +42,8 @@ RUN sed -i -e '/<servers>/,/<\/servers>/{//!d}' $JBOSS_HOME/domain/configuration
 RUN sed -i -s 's/security-realm=\"ApplicationRealm\"//g' $JBOSS_HOME/domain/configuration/domain.xml
 RUN sed -i -e 's/230\.0\.0\.4/230\.0\.0\.1/g' $JBOSS_HOME/domain/configuration/domain.xml
 RUN sed -i -e 's/231\.7\.7\.7/231\.7\.7\.1/g' $JBOSS_HOME/domain/configuration/domain.xml
+#RUN sed -i -e "s/127\.0\.0\.1/$NEWHOSTNAME/g" $JBOSS_HOME/domain/configuration/host.xml
+#RUN sed -i -e "s/localhost/$NEWHOSTNAME/g" $JBOSS_HOME/bin/jboss-cli.xml
 
 # create JBoss console user
 RUN $JBOSS_HOME/bin/add-user.sh admin Fujitsu.1 --silent
@@ -86,7 +89,7 @@ ADD ppasmeta-9.5.0.5-linux-x64.tar /tmp
 ADD install-postgres /tmp
 RUN chmod 755 /tmp/install-postgres
 RUN /tmp/install-postgres
-RUN rm -rf /tmp/install-postgres /tmp/ppasmeta-9.5.0.5-linux-x64.tar
+RUN rm -rf /tmp/install-postgres /tmp/ppasmeta-9.5.0.5-linux-x64.tar /tmp/ppasmeta-9.5.0.5-linux-x64
 
 # Create Postgres user.
 RUN useradd -m postgres ; echo postgres: | chpasswd ; usermod -a -G postgres postgres
@@ -120,7 +123,7 @@ RUN sed -i -e 's/database_selected\=/database_selected\=EDBPostgres/g' /opt/engi
 RUN sed -i -e 's/jdbc_module_name\=/jdbc_module_name\=com.postgres.jdbc/g' /opt/engine/server/setup.config
 RUN sed -i -e "s/db_ibpm_password\=/db_ibpm_password\=Fujitsu1/g" /opt/engine/server/setup.config
 RUN sed -i -e "s/db_port\=/db_port\=5444/g" /opt/engine/server/setup.config
-RUN sed -i -e "s|db_jdbc_library_path\=|db_jdbc_library_path\=\/opt\/edb\/connectors\/jdbc\/edb-*17.jar|g" /opt/engine/server/setup.config
+RUN sed -i -e "s|db_jdbc_library_path\=|db_jdbc_library_path\=\/opt\/edb\/connectors\/jdbc\/edb-jdbc17.jar|g" /opt/engine/server/setup.config
 RUN sed -i -e "s/db_admin_user_name\=sa/db_admin_user_name\=enterprisedb/g" /opt/engine/server/setup.config
 RUN sed -i -e "s/db_admin_password\=/db_admin_password\=Fujitsu1/g" /opt/engine/server/setup.config
 RUN sed -i -e "s|db_data_file_location\=|db_data_file_location\=\/opt\/edb\/9.5AS\/data|g" /opt/engine/server/setup.config
@@ -137,6 +140,9 @@ RUN sed -i -e 's/super_user\=ibpm_server1/super_user\=admin/g' /opt/engine/serve
 RUN sed -i -e 's/super_user_password\=/super_user_password\=Fujitsu1/g' /opt/engine/server/setup.config
 RUN sed -i -e 's/LDAPAccessUserID\=ibpm_server1/LDAPAccessUserID\=admin/g' /opt/engine/server/setup.config
 RUN sed -i -e 's/LDAPAccessUserPassword\=/LDAPAccessUserPassword\=Fujitsu1/g' /opt/engine/server/setup.config
+RUN sed -i -e 's/appserver_selected\=/appserver_selected\=JBoss/g' /opt/engine/server/setup.config
+RUN sed -i -e "s/localhost/$NEWHOSTNAME/g" /opt/engine/server/deployment/bin/setIBPMEnv.sh
+RUN sed -i -e "s/db_host\=localhost/db_host\=$NEWHOSTNAME/g" /opt/engine/server/setup.config
 
 # Install I-BPM
 RUN chmod 755 /opt/engine/server/deployment/dbsetup/postgresql/*.sh
@@ -147,28 +153,44 @@ RUN /init.sh; \
     ./dbsetup.sh; \
     chmod 755 /opt/engine/server/setup.sh; \
     export PGPASSWORD=Fujitsu1; \
+    export JAVA_HOME=/usr/lib/jvm/java; \
     /opt/engine/server/setup.sh -configFilePath /opt/engine/server/setup.config; \
-    JAVA_HOME=/usr/lib/jvm/java; \
     /opt/edb/9.5AS/bin/psql -U enterprisedb -d ibpmdb -c "\copy ibpmproperties to '/tmp/bpmprop' csv;"; \
-    NEWHOSTNAME=$(hostname -i); \
 	sed -i -e "s/SMTPServerHost,\"\",-1,0/SMTPServerHost,\"$NEWHOSTNAME\",-1,0/g" /tmp/bpmprop; \
 	sed -i -e 's/SMTPServerPort,25,-1,0/SMTPServerPort,2525,-1,0/g' /tmp/bpmprop; \
 	/opt/edb/9.5AS/bin/psql -U enterprisedb -d ibpmdb -c "delete from ibpmproperties"; \
 	/opt/edb/9.5AS/bin/psql -U enterprisedb -d ibpmdb -c "\copy ibpmproperties from '/tmp/bpmprop' csv;"
-RUN rm -rf /tmp/bpmprop
+ RUN rm -rf /tmp/bpmprop
 
 # Install BPM Action Library
-ADD bal-jars/*jar /opt/engine/server/instance/default/lib/ext
-ADD bal-jars/*txt /opt/engine/server/instance/default/resources
-ADD bal-jars/*bar /opt/engine/server/instance/default/lib/ext
-ADD bal-jars/*properties /opt/engine/server/instance/default/lib/ext
+ADD bal-jars/*jar /opt/engine/server/instance/default/lib/ext/
+ADD bal-jars/*txt /opt/engine/server/instance/default/resources/
+ADD bal-jars/*bar /opt/engine/server/instance/default/lib/ext/
+ADD bal-jars/*properties /opt/engine/server/instance/default/lib/ext/
+
+# Install Elastic Search
+# ADD elasticsearch-5.1.1.rpm /tmp/elasticsearch-5.1.1.rpm
+# RUN rpm -i /tmp/elasticsearch-5.1.1.rpm
+# RUN rm -rf /tmp/elasticsearch-5.1.1.rpm
+#RUN NEWHOSTNAME=$(hostname -i); \
+#    sed -i -e "/#network.host: /c\network.host: $NEWHOSTNAME" /etc/elasticsearch/elasticsearch.yml
+# RUN sed -i -e '/#node.attr.rack: r1/ a script.inline: true' /etc/elasticsearch/elasticsearch.yml
+# RUN sed -i -e '/#node.attr.rack: r1/ a script.stored: true' /etc/elasticsearch/elasticsearch.yml
+# RUN echo "http.cors.enabled: true" >> /etc/elasticsearch/elasticsearch.yml
+# RUN echo "http.cors.allow-origin: \"*\"" >> /etc/elasticsearch/elasticsearch.yml
+# RUN sed -i -e 's/Xms2g/Xms500m/g' /etc/elasticsearch/jvm.options
+# RUN sed -i -e 's/Xmx2g/Xmx500m/g' /etc/elasticsearch/jvm.options
+# ADD elasticsearch-head-master.zip /tmp/elasticsearch-head-master.zip
+# RUN unzip /tmp/elasticsearch-head-master.zip -d /opt
+# RUN rm -rf /tmp/elasticsearch-head-master.zip
+
 
 # Create mountpoint for data directory.
 VOLUME /opt/edb/9.5AS/data
 VOLUME /opt/jboss-eap-6.4 /opt/engine
 
 # JBoss and Postgres ports
-EXPOSE 8080 9990 9999 5444
+EXPOSE 8080 9990 9999 5444 49950 9200 9100
 
 ENTRYPOINT ["/init.sh"]
 CMD ["/bin/bash"]
