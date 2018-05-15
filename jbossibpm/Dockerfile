@@ -168,8 +168,7 @@ ADD bal-jars/*bar /opt/engine/server/instance/default/lib/ext/
 ADD bal-jars/*properties /opt/engine/server/instance/default/lib/ext/
 
 # Create mountpoint for data directory.
-VOLUME /opt/edb/9.5AS/data
-VOLUME /opt/jboss-eap-6.4 /opt/engine
+VOLUME /opt
 
 # JBoss and Postgres ports
 EXPOSE 8080 9990 9999 5444 49950 9200 9100
