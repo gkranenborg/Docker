@@ -7,7 +7,7 @@ FROM centos
 MAINTAINER "Gerben Kranenborg" "gkranenborg@gmail.com"
 
 # update OS
-RUN yum -y install sudo openssh-clients telnet unzip java-1.8.0-openjdk-devel && \
+RUN yum -y install sudo openssh-clients telnet unzip net-tools java-1.8.0-openjdk-devel && \
 yum clean all
 
 # enabling sudo group
@@ -33,6 +33,8 @@ RUN rm -rf /tmp/jboss-eap-6.4.zip
 # set environment
 ENV JBOSS_HOME /opt/jboss-eap-6.4
 ENV NEWHOSTNAME localhost
+ADD hostname.sh /hostname.sh
+RUN chmod 755 /hostname.sh
 
 # change executable permissions
 RUN chmod 755 $JBOSS_HOME/bin/*
@@ -148,42 +150,22 @@ RUN sed -i -e "s/db_host\=localhost/db_host\=$NEWHOSTNAME/g" /opt/engine/server/
 RUN chmod 755 /opt/engine/server/deployment/dbsetup/postgresql/*.sh
 RUN export PGDATA="/opt/edb/9.5AS/data"
 RUN /init.sh; \
-    sleep 20; \
     cd /opt/engine/server/deployment/dbsetup/postgresql; \
     ./dbsetup.sh; \
     chmod 755 /opt/engine/server/setup.sh; \
     export PGPASSWORD=Fujitsu1; \
     export JAVA_HOME=/usr/lib/jvm/java; \
     /opt/engine/server/setup.sh -configFilePath /opt/engine/server/setup.config; \
-    /opt/edb/9.5AS/bin/psql -U enterprisedb -d ibpmdb -c "\copy ibpmproperties to '/tmp/bpmprop' csv;"; \
-	sed -i -e "s/SMTPServerHost,\"\",-1,0/SMTPServerHost,\"$NEWHOSTNAME\",-1,0/g" /tmp/bpmprop; \
-	sed -i -e 's/SMTPServerPort,25,-1,0/SMTPServerPort,2525,-1,0/g' /tmp/bpmprop; \
-	/opt/edb/9.5AS/bin/psql -U enterprisedb -d ibpmdb -c "delete from ibpmproperties"; \
-	/opt/edb/9.5AS/bin/psql -U enterprisedb -d ibpmdb -c "\copy ibpmproperties from '/tmp/bpmprop' csv;"
- RUN rm -rf /tmp/bpmprop
+	/opt/engine/server/deployment/bin/exportProperties.sh /tmp/ibpmprop enterprisedb Fujitsu1; \
+	echo "ByPassJBoss6EjbLoadAfterEjbCreate=false" >>/tmp/ibpmprop; \
+	/opt/engine/server/deployment/bin/importProperties.sh /tmp/ibpmprop enterprisedb Fujitsu1
+ RUN rm -rf /tmp/ibpmprop
 
 # Install BPM Action Library
 ADD bal-jars/*jar /opt/engine/server/instance/default/lib/ext/
 ADD bal-jars/*txt /opt/engine/server/instance/default/resources/
 ADD bal-jars/*bar /opt/engine/server/instance/default/lib/ext/
 ADD bal-jars/*properties /opt/engine/server/instance/default/lib/ext/
-
-# Install Elastic Search
-# ADD elasticsearch-5.1.1.rpm /tmp/elasticsearch-5.1.1.rpm
-# RUN rpm -i /tmp/elasticsearch-5.1.1.rpm
-# RUN rm -rf /tmp/elasticsearch-5.1.1.rpm
-#RUN NEWHOSTNAME=$(hostname -i); \
-#    sed -i -e "/#network.host: /c\network.host: $NEWHOSTNAME" /etc/elasticsearch/elasticsearch.yml
-# RUN sed -i -e '/#node.attr.rack: r1/ a script.inline: true' /etc/elasticsearch/elasticsearch.yml
-# RUN sed -i -e '/#node.attr.rack: r1/ a script.stored: true' /etc/elasticsearch/elasticsearch.yml
-# RUN echo "http.cors.enabled: true" >> /etc/elasticsearch/elasticsearch.yml
-# RUN echo "http.cors.allow-origin: \"*\"" >> /etc/elasticsearch/elasticsearch.yml
-# RUN sed -i -e 's/Xms2g/Xms500m/g' /etc/elasticsearch/jvm.options
-# RUN sed -i -e 's/Xmx2g/Xmx500m/g' /etc/elasticsearch/jvm.options
-# ADD elasticsearch-head-master.zip /tmp/elasticsearch-head-master.zip
-# RUN unzip /tmp/elasticsearch-head-master.zip -d /opt
-# RUN rm -rf /tmp/elasticsearch-head-master.zip
-
 
 # Create mountpoint for data directory.
 VOLUME /opt/edb/9.5AS/data
