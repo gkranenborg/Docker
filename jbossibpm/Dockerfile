@@ -1,4 +1,4 @@
-# dockerfile to build image for JBoss EAP 6.4
+# dockerfile to build image for Fujitsu DXP
 
 # start from CentOS
 FROM centos
@@ -10,8 +10,7 @@ MAINTAINER "Gerben Kranenborg" "gkranenborg@gmail.com"
 RUN yum -y install sudo openssh-clients telnet unzip net-tools java-1.8.0-openjdk-devel && \
 yum clean all
 
-# enabling sudo group
-# enabling sudo over ssh
+# enabling sudo group and sudo over ssh
 RUN echo '%wheel ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers && \
 sed -i 's/.*requiretty$/Defaults !requiretty/' /etc/sudoers
 
@@ -44,8 +43,6 @@ RUN sed -i -e '/<servers>/,/<\/servers>/{//!d}' $JBOSS_HOME/domain/configuration
 RUN sed -i -s 's/security-realm=\"ApplicationRealm\"//g' $JBOSS_HOME/domain/configuration/domain.xml
 RUN sed -i -e 's/230\.0\.0\.4/230\.0\.0\.1/g' $JBOSS_HOME/domain/configuration/domain.xml
 RUN sed -i -e 's/231\.7\.7\.7/231\.7\.7\.1/g' $JBOSS_HOME/domain/configuration/domain.xml
-#RUN sed -i -e "s/127\.0\.0\.1/$NEWHOSTNAME/g" $JBOSS_HOME/domain/configuration/host.xml
-#RUN sed -i -e "s/localhost/$NEWHOSTNAME/g" $JBOSS_HOME/bin/jboss-cli.xml
 
 # create JBoss console user
 RUN $JBOSS_HOME/bin/add-user.sh admin Fujitsu.1 --silent
