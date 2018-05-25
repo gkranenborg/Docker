@@ -28,10 +28,29 @@ fi
 if [ -f /opt/SSOFI_Sessions/EmailNotification.properties ]
 then
 	sed -i -e "s/interstagedemo/$NEWHOSTNAME/g" /opt/SSOFI_Sessions/EmailNotification.properties
+	sed -i -e "s/127.0.0.1/$NEWHOSTNAME/g" /opt/SSOFI_Sessions/EmailNotification.properties
+	sed -i -e "s/$OLDHOSTNAME/$NEWHOSTNAME/g" /opt/SSOFI_Sessions/EmailNotification.properties
+fi
+if [ -f /opt/AgileAdapterData/EmailNotification.properties ]
+then
+	sed -i -e "s/interstagedemo/$NEWHOSTNAME/g" /opt/SSOFI_Sessions/EmailNotification.properties
+	sed -i -e "s/127.0.0.1/$NEWHOSTNAME/g" /opt/SSOFI_Sessions/EmailNotification.properties
 	sed -i -e "s/$OLDHOSTNAME/$NEWHOSTNAME/g" /opt/SSOFI_Sessions/EmailNotification.properties
 fi
 if [ -f /opt/AgileAdapterData/Analytics.properties ]
 then
 	sed -i -e "s/interstagedemo/$NEWHOSTNAME/g" /opt/AgileAdapterData/Analytics.properties
 	sed -i -e "s/$OLDHOSTNAME/$NEWHOSTNAME/g" /opt/AgileAdapterData/Analytics.properties
+fi
+if [ -f /opt/SSOFI_Sessions/config.txt ]
+then
+	sed -i -e "s/interstagedemo/$NEWHOSTNAME/g" /opt/SSOFI_Sessions/config.txt
+	sed -i -e "s/127.0.0.1/$NEWHOSTNAME/g" /opt/SSOFI_Sessions/config.txt
+	sed -i -e "s/$OLDHOSTNAME/$NEWHOSTNAME/g" /opt/SSOFI_Sessions/config.txt
+fi
+if [ -f /opt/PostHocData/Config.properties ]
+then
+	sed -i -e "s/interstagedemo/$NEWHOSTNAME/g" /opt/PostHocData/Config.properties
+	sed -i -e "s/127.0.0.1/$NEWHOSTNAME/g" /opt/PostHocData/Config.properties
+	sed -i -e "s/$OLDHOSTNAME/$NEWHOSTNAME/g" /opt/PostHocData/Config.properties
 fi

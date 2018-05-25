@@ -147,6 +147,7 @@ RUN sed -i -e "s/db_host\=localhost/db_host\=$NEWHOSTNAME/g" /opt/engine/server/
 RUN chmod 755 /opt/engine/server/deployment/dbsetup/postgresql/*.sh
 RUN export PGDATA="/opt/edb/9.5AS/data"
 RUN /init.sh; \
+    sleep 10; \
     cd /opt/engine/server/deployment/dbsetup/postgresql; \
     ./dbsetup.sh; \
     chmod 755 /opt/engine/server/setup.sh; \
@@ -168,7 +169,7 @@ ADD bal-jars/*properties /opt/engine/server/instance/default/lib/ext/
 VOLUME /opt
 
 # JBoss and Postgres ports
-EXPOSE 8080 9990 9999 5444 49950 9200 9100
+EXPOSE 8080 9990 9999 5444 49950 9200 9100 2525
 
 ENTRYPOINT ["/init.sh"]
 CMD ["/bin/bash"]
